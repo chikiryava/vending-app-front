@@ -4,13 +4,8 @@ import {useNavigate} from "react-router-dom";
 import {useCart} from "../context/CartContext";
 import ImportDrinksButton from "../components/ImportDrinksButton";
 import {useMachineLock} from "../hooks/useVendingMachineLock";
-import apiService, {Brand, Drink} from "../services/api";
-
-// Define DrinkFilter type if it's not already defined
-type DrinkFilter = {
-    brandId?: number | null;
-    maxPrice?: number;
-};
+import apiService from "../services/api";
+import {Brand, Drink, DrinkFilter} from "../types";
 
 function CatalogPage() {
     const [drinks, setDrinks] = useState<Drink[]>([]);
@@ -25,46 +20,35 @@ function CatalogPage() {
     const navigate = useNavigate();
     const {isBusy} = useMachineLock();
 
-    // Fetch all drinks for the selected brand to calculate price range
     const fetchDrinksAndCalculatePriceRange = async (brandId: number | null) => {
         setLoading(true);
         try {
-            // Get all drinks for the selected brand (or all brands)
             const filter: DrinkFilter = {};
             if (brandId !== null) {
                 filter.brandId = brandId;
             }
 
-            // We don't include maxPrice here because we need ALL drinks for the brand
-            // to calculate the full price range
             const drinksData = await apiService.getFilteredDrinks(filter);
 
             if (drinksData.length > 0) {
-                // Calculate price range from fetched drinks
                 const prices = drinksData.map(d => d.price);
                 const minPrice = Math.min(...prices);
                 const maxPrice = Math.max(...prices);
 
                 setPriceRange({min: minPrice, max: maxPrice});
-
-                // When changing brands, reset current price to max
                 setCurrentPrice(maxPrice);
-
-                // Since we already have the drinks data, use it directly
                 setDrinks(drinksData);
             } else {
-                // No drinks for this brand
                 setPriceRange({min: 0, max: 0});
                 setCurrentPrice(0);
                 setDrinks([]);
             }
         } catch (error) {
-            console.error("Error fetching drinks data:", error);
+            console.error("Ошибка при получении данных", error);
         }
         setLoading(false);
     };
 
-    // Fetch drinks filtered by both brand and price
     const fetchFilteredDrinks = async () => {
         setLoading(true);
         try {
@@ -79,23 +63,19 @@ function CatalogPage() {
             const drinksData = await apiService.getFilteredDrinks(filter);
             setDrinks(drinksData);
         } catch (error) {
-            console.error("Error fetching filtered drinks:", error);
+            console.error("Ошибка при получении отфильтрованных данных", error);
         }
         setLoading(false);
     };
 
-    // Initial load and refresh trigger
     useEffect(() => {
         const initializeData = async () => {
             try {
-                // Fetch brands
                 const brandsData = await apiService.getBrands();
                 setBrands(brandsData);
-
-                // Fetch initial drinks and price range
                 await fetchDrinksAndCalculatePriceRange(selectedBrandId);
             } catch (error) {
-                console.error("Error initializing data:", error);
+                console.error("Ошибка при инициализации данных", error);
                 setLoading(false);
             }
         };
@@ -103,16 +83,13 @@ function CatalogPage() {
         initializeData();
     }, [refresh]);
 
-    // When brand changes, recalculate price range and fetch new drinks
     useEffect(() => {
         if (brands.length > 0) {
             fetchDrinksAndCalculatePriceRange(selectedBrandId);
         }
     }, [selectedBrandId]);
 
-    // When price changes, fetch filtered drinks
     useEffect(() => {
-        // Only run if we have brands and the price range is valid
         if (brands.length > 0 && priceRange.max > 0 && currentPrice >= priceRange.min) {
             fetchFilteredDrinks();
         }
@@ -201,6 +178,7 @@ function CatalogPage() {
                                 imageUrl={drink.imageUrl}
                                 quantity={drink.quantity}
                                 selected={isSelected}
+
                             />
                         );
                     })

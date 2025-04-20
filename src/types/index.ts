@@ -1,4 +1,3 @@
-// src/types/index.ts
 export interface Brand {
     id: number;
     name: string;
@@ -33,8 +32,27 @@ export interface Coin {
     nominal: number;
     icon: string;
 }
-
-export interface CoinChange {
+export interface DrinkFilter {
+    maxPrice?: number;
+    brandId?: number | null;
+}
+export interface InsertedCoin {
     nominal: number;
     quantity: number;
+}
+
+export interface OrderItem {
+    drinkId: number;
+    quantity: number;
+}
+
+export interface OrderPayload {
+    items: OrderItem[];
+    insertedCoins: InsertedCoin[];
+}
+
+export interface OrderResponse {
+    changeCoins: { nominal: number; quantity: number }[];
+    changeAmount: number;
+    message: string;
 }

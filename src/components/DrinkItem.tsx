@@ -1,4 +1,3 @@
-// src/components/DrinkItem.tsx
 import {useEffect, useState} from 'react';
 import { useCart } from '../context/CartContext';
 
@@ -16,7 +15,6 @@ const DrinkItem = ({ id, imageUrl, name, price, quantity, selected: initialSelec
     const [isSelected, setIsSelected] = useState<boolean>(initialSelected);
     const [currentStock] = useState<number>(quantity);
 
-    // Обновляем локальное состояние, если props.selected меняется (например, при фильтрации)
     useEffect(() => {
         setIsSelected(initialSelected);
     }, [initialSelected]);

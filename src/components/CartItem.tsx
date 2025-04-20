@@ -1,4 +1,3 @@
-// src/components/CartItem.tsx
 import React from 'react';
 import { FaPlus, FaMinus, FaTrash } from 'react-icons/fa';
 import { CartItem as CartItemType } from '../types';

@@ -30,7 +30,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [cartItems, setCartItems] = useState<CartItem[]>(() => {
-        // Загрузка из localStorage при инициализации
         const saved = localStorage.getItem('cartItems');
         return saved ? JSON.parse(saved) : [];
     });

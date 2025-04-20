@@ -1,12 +1,11 @@
-// src/pages/PaymentPage.tsx
 import React, { useState, useMemo } from 'react';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import PaymentSuccess from "../components/PaymentSuccess";
 import CoinRow from "../components/CoinRow";
 import PaymentSummary from "../components/PaymentSummary";
-import apiService, { InsertedCoin, OrderItem } from "../services/api";
-import { Coin } from "../types";
+import apiService from "../services/api";
+import {Coin, InsertedCoin, OrderItem} from "../types";
 
 const COINS: Coin[] = [
     { nominal: 1, icon: 'https://upload.wikimedia.org/wikipedia/commons/1/18/Russia-Coin-1-2009-a.png' },

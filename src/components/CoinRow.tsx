@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaMinus, FaPlus } from "react-icons/fa";
+import {FaMinus, FaPlus} from "react-icons/fa";
 
 interface CoinRowProps {
     coin: { nominal: number; icon: string };
@@ -35,7 +35,7 @@ const CoinRow: React.FC<CoinRowProps> = ({
                         onClick={() => onSubtract(coin.nominal)}
                         className="bg-gray-950 text-white p-1 rounded hover:bg-gray-800"
                     >
-                        <FaMinus size={12} />
+                        <FaMinus size={12}/>
                     </button>
                     <input
                         type="number"
@@ -50,7 +50,7 @@ const CoinRow: React.FC<CoinRowProps> = ({
                         onClick={() => onAdd(coin.nominal)}
                         className="bg-gray-950 text-white p-1 rounded hover:bg-gray-800"
                     >
-                        <FaPlus size={12} />
+                        <FaPlus size={12}/>
                     </button>
                 </div>
             </td>
