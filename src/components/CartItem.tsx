@@ -1,17 +1,10 @@
+// src/components/CartItem.tsx
 import React from 'react';
 import { FaPlus, FaMinus, FaTrash } from 'react-icons/fa';
+import { CartItem as CartItemType } from '../types';
 
 interface CartItemProps {
-    item: {
-        id: number;
-        quantity: number;
-        drink: {
-            name: string;
-            imageUrl: string;
-            price: number;
-            stock: number;
-        };
-    };
+    item: CartItemType;
     updateItemQuantity: (id: number, quantity: number) => void;
     removeItem: (id: number) => void;
 }
@@ -70,7 +63,7 @@ const CartItem: React.FC<CartItemProps> = ({ item, updateItemQuantity, removeIte
             <td className="p-2 text-center">
                 <button
                     onClick={() => removeItem(item.id)}
-                    className="p-1 rounded"
+                    className="p-1 rounded hover:text-red-600 transition-colors"
                 >
                     <FaTrash size={20} />
                 </button>

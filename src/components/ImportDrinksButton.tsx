@@ -1,11 +1,12 @@
+// src/components/ImportDrinksButton.tsx
 import React, { useRef } from 'react';
-import axios from 'axios';
+import apiService from '../services/api';
 
 interface ImportDrinksButtonProps {
     onSuccess: () => void;
 }
 
-const ImportDrinks = ({onSuccess}:ImportDrinksButtonProps) => {
+const ImportDrinks = ({ onSuccess }: ImportDrinksButtonProps) => {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const handleButtonClick = () => {
@@ -15,16 +16,9 @@ const ImportDrinks = ({onSuccess}:ImportDrinksButtonProps) => {
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
-            const formData = new FormData();
-            formData.append('file', file);
 
             try {
-                const response = await axios.post('https://localhost:7153/api/Drinks/ImportDrinks', formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    }
-                });
-                console.log(response.data);
+                await apiService.importDrinks(file);
                 onSuccess();
             } catch (error) {
                 console.error("Ошибка импорта:", error);
@@ -33,10 +27,10 @@ const ImportDrinks = ({onSuccess}:ImportDrinksButtonProps) => {
     };
 
     return (
-        <div className="p-4">
+        <div>
             <button
                 onClick={handleButtonClick}
-                className="bg-gray-300 text-black px-16 py-3 rounded"
+                className="bg-gray-300 text-black px-16 py-3 rounded hover:bg-gray-400 transition-colors"
             >
                 Импорт товаров
             </button>

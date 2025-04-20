@@ -1,3 +1,4 @@
+// src/components/DrinkItem.tsx
 import {useEffect, useState} from 'react';
 import { useCart } from '../context/CartContext';
 
@@ -13,7 +14,7 @@ interface DrinkItemProps {
 const DrinkItem = ({ id, imageUrl, name, price, quantity, selected: initialSelected }: DrinkItemProps) => {
     const { addItem, removeItem } = useCart();
     const [isSelected, setIsSelected] = useState<boolean>(initialSelected);
-    const [currentStock, setCurrentStock] = useState<number>(quantity);
+    const [currentStock] = useState<number>(quantity);
 
     // Обновляем локальное состояние, если props.selected меняется (например, при фильтрации)
     useEffect(() => {
@@ -43,7 +44,7 @@ const DrinkItem = ({ id, imageUrl, name, price, quantity, selected: initialSelec
 
     return (
         <div className="border p-4 mb-4 flex flex-col items-center text-center">
-            <div className="w-36 h-36 flex items-center justify-center overflow-hidden mb-2">
+            <div className="w-48 h-48 flex items-center justify-center overflow-hidden mb-2">
                 <img src={imageUrl} alt={name} className="object-contain w-full h-full" />
             </div>
             <h2 className="text-lg font-semibold mb-2">{name}</h2>
@@ -51,7 +52,7 @@ const DrinkItem = ({ id, imageUrl, name, price, quantity, selected: initialSelec
             <button
                 onClick={handleToggle}
                 disabled={!isSelected && currentStock === 0}
-                className={`rounded py-2 px-8 text-white font-bold ${
+                className={`rounded-sm py-2 px-8 text-white font-bold ${
                     !isSelected && currentStock === 0
                         ? "bg-gray-400 cursor-not-allowed"
                         : isSelected

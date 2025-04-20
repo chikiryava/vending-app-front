@@ -1,12 +1,14 @@
+// src/pages/PaymentPage.tsx
 import React, { useState, useMemo } from 'react';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
-import axios from "axios";
-import PaymentSuccess from "../components/PaymentSuccess.tsx";
-import CoinRow from "../components/CoinRow.tsx";
-import PaymentSummary from "../components/PaymentSummary.tsx";
+import PaymentSuccess from "../components/PaymentSuccess";
+import CoinRow from "../components/CoinRow";
+import PaymentSummary from "../components/PaymentSummary";
+import apiService, { InsertedCoin, OrderItem } from "../services/api";
+import { Coin } from "../types";
 
-const COINS = [
+const COINS: Coin[] = [
     { nominal: 1, icon: 'https://upload.wikimedia.org/wikipedia/commons/1/18/Russia-Coin-1-2009-a.png' },
     { nominal: 2, icon: 'https://ru-moneta.ru/upload/monety-21/2020-2-rub-revers.jpg' },
     { nominal: 5, icon: 'https://filtorg.ru/images/thumbnails/2184/1911/detailed/52/5-rub-1997-2.jpg' },
@@ -29,6 +31,7 @@ const PaymentPage: React.FC = () => {
     const [changeAmount, setChangeAmount] = useState<number>(0);
     const [message, setMessage] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
 
     const totalInserted = useMemo(() => {
         return Object.entries(coinsCount).reduce((acc, [nominal, count]) => {
@@ -57,33 +60,37 @@ const PaymentPage: React.FC = () => {
     };
 
     const handlePayment = async () => {
-        const payload = {
-            items: cartItems.map(item => ({
-                drinkId: item.drink.id,
-                quantity: item.quantity,
-            })),
-            insertedCoins: Object.entries(coinsCount).map(([nom, qty]) => ({
+        setLoading(true);
+        setError(null);
+
+        const orderItems: OrderItem[] = cartItems.map(item => ({
+            drinkId: item.drink.id,
+            quantity: item.quantity,
+        }));
+
+        const insertedCoins: InsertedCoin[] = Object.entries(coinsCount)
+            .filter(([_, qty]) => qty > 0)
+            .map(([nom, qty]) => ({
                 nominal: Number(nom),
                 quantity: qty,
-            })),
-        };
+            }));
 
         try {
-            const response = await axios.post("https://localhost:7153/api/Orders", payload, {
-                headers: { 'Content-Type': 'application/json' }
+            const response = await apiService.createOrder({
+                items: orderItems,
+                insertedCoins: insertedCoins
             });
 
-            const data = response.data;
-            console.log(data);
-            setChange(data.changeCoins);
-            setChangeAmount(data.changeAmount);
-            setMessage(data.message);
+            setChange(response.changeCoins);
+            setChangeAmount(response.changeAmount);
+            setMessage(response.message);
             setPaymentSuccess(true);
             clearCart();
-            setError(null);
         } catch (error) {
             console.error("Ошибка при оплате:", error);
             setError("Извините, в данный момент мы не можем продать вам товар по причине того, что автомат не может выдать вам нужную сдачу");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -132,18 +139,21 @@ const PaymentPage: React.FC = () => {
             <div className="flex gap-4 mt-6">
                 <button
                     onClick={handleBack}
-                    className="bg-gray-300 px-6 py-3 rounded"
+                    className="bg-gray-300 px-6 py-3 rounded hover:bg-gray-400 transition-colors"
+                    disabled={loading}
                 >
                     Вернуться
                 </button>
                 <button
                     onClick={handlePayment}
-                    disabled={!isEnough}
+                    disabled={!isEnough || loading}
                     className={`px-6 py-3 rounded text-white ${
-                        isEnough ? "bg-green-600" : "bg-gray-400 cursor-not-allowed"
+                        isEnough && !loading
+                            ? "bg-green-600 hover:bg-green-700 transition-colors"
+                            : "bg-gray-400 cursor-not-allowed"
                     }`}
                 >
-                    Оплатить
+                    {loading ? "Обработка..." : "Оплатить"}
                 </button>
             </div>
         </div>

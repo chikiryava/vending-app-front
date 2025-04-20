@@ -1,100 +1,144 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import {useEffect, useState} from 'react';
 import DrinkItem from "../components/DrinkItem";
-import { useNavigate } from "react-router-dom";
-import { useCart } from "../context/CartContext";
-import ImportDrinksButton from "../components/ImportDrinksButton.tsx";
-import {useMachineLock} from "../hooks/useVendingMachineLock.tsx";
+import {useNavigate} from "react-router-dom";
+import {useCart} from "../context/CartContext";
+import ImportDrinksButton from "../components/ImportDrinksButton";
+import {useMachineLock} from "../hooks/useVendingMachineLock";
+import apiService, {Brand, Drink} from "../services/api";
 
-interface DrinkItems {
-    id: number;
-    name: string;
-    price: number;
-    imageUrl: string;
-    brand: Brand;
-    brandId: number;
-    quantity: number;
-}
-
-interface Brand {
-    id: number;
-    name: string;
-}
+// Define DrinkFilter type if it's not already defined
+type DrinkFilter = {
+    brandId?: number | null;
+    maxPrice?: number;
+};
 
 function CatalogPage() {
-    const [drinks, setDrinks] = useState<DrinkItems[]>([]);
+    const [drinks, setDrinks] = useState<Drink[]>([]);
     const [brands, setBrands] = useState<Brand[]>([]);
     const [selectedBrandId, setSelectedBrandId] = useState<number | null>(null);
-    const [priceRange, setPriceRange] = useState({ min: 0, max: 0 });
-    const [currentPrice, setCurrentPrice] = useState<number>(0);
+    const [priceRange, setPriceRange] = useState({min: 0, max: 100});
+    const [currentPrice, setCurrentPrice] = useState<number>(100);
     const [refresh, setRefresh] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    const { cartItems } = useCart();
+    const {cartItems} = useCart();
     const navigate = useNavigate();
+    const {isBusy} = useMachineLock();
 
-    const { isBusy } = useMachineLock();
+    // Fetch all drinks for the selected brand to calculate price range
+    const fetchDrinksAndCalculatePriceRange = async (brandId: number | null) => {
+        setLoading(true);
+        try {
+            // Get all drinks for the selected brand (or all brands)
+            const filter: DrinkFilter = {};
+            if (brandId !== null) {
+                filter.brandId = brandId;
+            }
 
-    const fetchDrinks = async () => {
-        axios.get("https://localhost:7153/api/Drinks")
-            .then(response => {
-                const data = response.data;
-                setDrinks(data);
-                console.log(response.data);
+            // We don't include maxPrice here because we need ALL drinks for the brand
+            // to calculate the full price range
+            const drinksData = await apiService.getFilteredDrinks(filter);
 
-                const prices = data.map((d: DrinkItems) => d.price);
-                setPriceRange({ min: Math.min(...prices), max: Math.max(...prices) });
-                setCurrentPrice(Math.max(...prices));
-            })
-            .catch(error => console.error("Ошибка при получении напитков:", error));
+            if (drinksData.length > 0) {
+                // Calculate price range from fetched drinks
+                const prices = drinksData.map(d => d.price);
+                const minPrice = Math.min(...prices);
+                const maxPrice = Math.max(...prices);
 
-        axios.get("https://localhost:7153/api/Brands")
-            .then(response => setBrands(response.data))
-            .catch(error => console.error("Ошибка при получении брендов:", error));
+                setPriceRange({min: minPrice, max: maxPrice});
+
+                // When changing brands, reset current price to max
+                setCurrentPrice(maxPrice);
+
+                // Since we already have the drinks data, use it directly
+                setDrinks(drinksData);
+            } else {
+                // No drinks for this brand
+                setPriceRange({min: 0, max: 0});
+                setCurrentPrice(0);
+                setDrinks([]);
+            }
+        } catch (error) {
+            console.error("Error fetching drinks data:", error);
+        }
+        setLoading(false);
     };
 
+    // Fetch drinks filtered by both brand and price
+    const fetchFilteredDrinks = async () => {
+        setLoading(true);
+        try {
+            const filter: DrinkFilter = {
+                maxPrice: currentPrice
+            };
+
+            if (selectedBrandId !== null) {
+                filter.brandId = selectedBrandId;
+            }
+
+            const drinksData = await apiService.getFilteredDrinks(filter);
+            setDrinks(drinksData);
+        } catch (error) {
+            console.error("Error fetching filtered drinks:", error);
+        }
+        setLoading(false);
+    };
+
+    // Initial load and refresh trigger
     useEffect(() => {
-       fetchDrinks();
-       console.log(drinks);
+        const initializeData = async () => {
+            try {
+                // Fetch brands
+                const brandsData = await apiService.getBrands();
+                setBrands(brandsData);
+
+                // Fetch initial drinks and price range
+                await fetchDrinksAndCalculatePriceRange(selectedBrandId);
+            } catch (error) {
+                console.error("Error initializing data:", error);
+                setLoading(false);
+            }
+        };
+
+        initializeData();
     }, [refresh]);
 
+    // When brand changes, recalculate price range and fetch new drinks
     useEffect(() => {
-        const filtered = selectedBrandId
-            ? drinks.filter(d => d.brandId === selectedBrandId)
-            : drinks;
+        if (brands.length > 0) {
+            fetchDrinksAndCalculatePriceRange(selectedBrandId);
+        }
+    }, [selectedBrandId]);
 
-        const prices = filtered.map(d => d.price);
-        const min = Math.min(...prices);
-        const max = Math.max(...prices);
-
-        setPriceRange({ min, max });
-        setCurrentPrice(max);
-    }, [drinks, selectedBrandId]);
+    // When price changes, fetch filtered drinks
+    useEffect(() => {
+        // Only run if we have brands and the price range is valid
+        if (brands.length > 0 && priceRange.max > 0 && currentPrice >= priceRange.min) {
+            fetchFilteredDrinks();
+        }
+    }, [currentPrice]);
 
     const handleImportSuccess = () => {
         setRefresh(prev => !prev);
     };
 
-    const filteredDrinks = drinks.filter(drink =>
-        (!selectedBrandId || drink.brandId === selectedBrandId) &&
-        drink.price <= currentPrice
-    );
     const handleCart = () => {
         navigate('/cart');
     };
 
     if (isBusy) {
-        return <div style={{ color: "red" }}>Извините, автомат занят другим пользователем</div>;
+        return <div className="p-8 text-red-600 text-xl">Извините, автомат занят другим пользователем</div>;
     }
 
     return (
         <>
             <nav className="w-full flex justify-between items-center p-8 ">
                 <h1 className="text-4xl font-bold">Газированные напитки</h1>
-                <ImportDrinksButton onSuccess={handleImportSuccess} />
+                <ImportDrinksButton onSuccess={handleImportSuccess}/>
             </nav>
 
-            <div className="grid grid-cols-3 gap-32 w-full px-8 mb-4 justify-center items-center">
-                <div className="flex flex-col mr-4">
+            <div className="grid grid-cols-3 gap-8 w-full px-8 py-4  ">
+                <div className="flex flex-col justify-center">
                     <label className="mb-1">Выберите бренд:</label>
                     <select
                         className="border p-2 rounded"
@@ -120,22 +164,33 @@ function CatalogPage() {
                         value={currentPrice}
                         onChange={(e) => setCurrentPrice(Number(e.target.value))}
                         className="w-full"
+                        disabled={priceRange.min === priceRange.max}
                     />
                 </div>
 
                 <div className="flex items-end justify-end">
                     <button
-                        className="bg-green-500 rounded w-2/3 py-4 text-white font-bold"
+                        className={`rounded w-2/3 py-4 text-white font-bold ${
+                            cartItems.reduce((sum, item) => sum + item.quantity, 0) === 0
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-green-500"
+                        }`}
                         onClick={handleCart}
-                        disabled={cartItems.reduce((sum, item) => sum + item.quantity, 0)===0}>
+                        disabled={cartItems.reduce((sum, item) => sum + item.quantity, 0) === 0}>
                         Выбрано: {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
                     </button>
                 </div>
             </div>
+            <hr className="border-t border-gray-300 border-2 mx-8 mt-2"/>
 
-            <div className="p-8 grid grid-cols-4 gap-4">
-                {filteredDrinks.length > 0 ? (
-                    filteredDrinks.map(drink => {
+
+            <div className="p-8 grid grid-cols-4 gap-4 content-start">
+                {loading ? (
+                    <div className="col-span-4 flex justify-center items-center">
+                        <p className="text-xl">Загрузка напитков...</p>
+                    </div>
+                ) : drinks.length > 0 ? (
+                    drinks.map(drink => {
                         const isSelected = cartItems.some(item => item.id === drink.id);
                         return (
                             <DrinkItem
@@ -150,7 +205,9 @@ function CatalogPage() {
                         );
                     })
                 ) : (
-                    <p>Напитки не найдены.</p>
+                    <div className="col-span-4 flex justify-center items-center">
+                        <p className="text-xl">Напитки не найдены.</p>
+                    </div>
                 )}
             </div>
         </>
